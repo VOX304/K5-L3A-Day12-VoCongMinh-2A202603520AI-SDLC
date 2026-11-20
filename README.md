@@ -1,3 +1,39 @@
+# Đảo Đèn Lồng · Ticket 01
+
+Bộ khung TypeScript cho browser và Node headless theo Test Contract v1.0. Ticket này chỉ có di chuyển và trace; chưa phải bản game Phase 1 hoàn chỉnh.
+
+Chạy với Node.js **22.12+** (CI dùng Node 24), trên Windows/macOS/Linux:
+
+```sh
+npm ci
+npm run build
+npm start
+```
+
+Mở địa chỉ Vite in trên terminal. Điều khiển: **WASD / phím mũi tên** để đi, **Q/E** xoay camera. Nhân vật dạng capsule có nón, đứng trên đảo tròn bán kính 40 m. Tốc độ là 6 m/s; input chéo được chuẩn hóa.
+
+Headless sau build (không cần cửa sổ/GPU):
+
+```sh
+node dist/headless/cli.js --seed 42 --night 1 --scenario examples/scenario.json --inputs examples/inputs.json --ticks 240 --snapshot-every 60 --out trace.jsonl
+```
+
+Hoặc chạy trực tiếp TypeScript: `npm run headless -- --seed 42 --night 1 --ticks 120 --out trace.jsonl`. Kiểm thử bằng `npm test`.
+
+`--seed`, `--night`, `--ticks`, `--out` là bắt buộc; `--night` chỉ nhận 1. `--ticks` nhận số nguyên không âm, `--snapshot-every` nhận số nguyên dương (mặc định 10); seed nhận số nguyên an toàn có dấu. `--scenario` và `--inputs` là tùy chọn. Lỗi tham số, JSON, schema hoặc tick input không tăng nghiêm ngặt trả exit **2**, thông báo ra stderr; lỗi ghi file trả exit **1**. CLI không in log ra stdout và kiểm tra hết input trước khi tạo output. Thư mục chứa `--out` phải tồn tại.
+
+`src/sim` là lõi thuần, không import DOM, Node hay Three.js; `src/headless` lo validation/IO; `src/web` chỉ lấy input, bước mô phỏng và render. Browser dùng bộ tích lũy thời gian cho bước cố định 1/60 s, headless chạy nhanh nhất có thể. Tick và PRNG dùng số nguyên, tọa độ giữ độ chính xác trong mô phỏng và chỉ làm tròn 3 chữ số lúc tạo snapshot.
+
+Snapshot tick 0 được ghi sau scenario, trước input tick 0. Bước k đọc input tick k rồi tăng tick lên k+1; event ghi k+1 trước snapshot cùng tick. Trường input vắng mặt giữ giá trị; nút chỉ có cạnh nhấn khi false → true. Snapshot xuất ở tick 0, N, 2N… theo `--snapshot-every`; không tự thêm snapshot cuối nếu không đúng chu kỳ. Dòng cuối luôn là `end`, kể cả khi `--ticks 0`. `sim_tick` bằng tick. Thời gian được tính từ thời gian ban đầu trừ tick/60; bình minh dừng mô phỏng với `game_over`/`dawn` rồi `end`.
+
+Tất cả tuning nằm ở [src/sim/tuning.ts](src/sim/tuning.ts). `npm run contract` (cũng chạy trong build) sinh [game.contract.json](game.contract.json). Kiểm thử phát hiện contract đã commit lệch tuning. Số liệu đang dùng từ Ticket-02: tốc độ 6 m/s, đảo 40 m, thời gian 300 s, metadata 3 Ngọn Lửa. Các khái niệm chưa có cơ chế được khai `null`; `fall_enabled` là `false`. Điểm luôn 0. Scenario hỗ trợ `player.pos`, `player.carried`, `player.flames`, `time_left_s`; các trường thực thể v1.0 được kiểm tra định dạng nhưng chưa dựng thực thể, snapshot luôn có `lanterns: []`, `shades: []`, `motes: []`, `motes_active: 0`. Trường mở rộng không biết được bỏ qua để thuận tiện tích hợp ticket sau.
+
+Giới hạn ticket: chưa nhảy, lướt, thu thập, tương tác đèn, tỏa sáng, kẻ địch, sát thương hay thắng màn. Các nút được lưu và phát hiện cạnh nhấn nhưng không có hiệu ứng gameplay. Chưa xử lý rơi hoặc chặn mép đảo; di chuyển tiếp tục trên mặt phẳng XZ và giữ nguyên Y trong scenario. Tài liệu gốc ở [docs/requirements](docs/requirements) và [GLOSSARY.md](GLOSSARY.md).
+
+Sáng tạo của tôi: hình capsule đội nón và ánh sáng ấm đi theo Mây; chỉ là render, không đổi trace. Các mesh tạo bằng hình học Three.js, không dùng asset ngoài. Xem [CREDITS.md](CREDITS.md) và bằng chứng [docs/evidence/ticket-01.md](docs/evidence/ticket-01.md).
+
+---
+
 # Day 12 — AI SDLC: Đảo Đèn Lồng
 
 > **Cá nhân** (1 người / 1 MSSV) · Áp dụng SDLC cùng AI để xây một **game 3D** qua **4 phase**, từ yêu cầu ban đầu tới bản phát hành.
