@@ -67,7 +67,7 @@ export function validateInputs(value: unknown): InputFrame[] {
   });
 }
 
-/** Validate all v1.0 fields, including entities deferred to later tickets. */
+/** Validate the scenario before initializing the simulation. */
 export function validateScenario(value: unknown): Scenario {
   const root = record(value, 'scenario');
   const scenario: Scenario = {};

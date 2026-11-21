@@ -8,6 +8,7 @@ const directory = mkdtempSync(join(tmpdir(), 'dao-den-long-replay-'));
 const cases = [
   { name: 'movement', scenario: 'examples/scenario.json', inputs: 'examples/inputs.json', ticks: 240, snapshotEvery: 60 },
   { name: 'jump', scenario: 'examples/scenario.json', inputs: 'examples/jump-inputs.json', ticks: 63, snapshotEvery: 21 },
+  { name: 'night1', scenario: 'examples/night1-scenario.json', inputs: 'examples/night1-inputs.json', ticks: 500, snapshotEvery: 30 },
   { name: 'fall', scenario: 'examples/fall-scenario.json', inputs: 'examples/fall-inputs.json', ticks: 121, snapshotEvery: 1 },
 ];
 try {

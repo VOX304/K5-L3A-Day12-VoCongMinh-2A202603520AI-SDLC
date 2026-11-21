@@ -35,13 +35,19 @@ export interface PlayerHitEvent {
   type: 'event';
   tick: number;
   name: 'player_hit';
-  data: { by: 'fall'; flames: number; dropped: number };
+  data: { by: 'fall' | 'shade'; flames: number; dropped: number };
 }
 
 export interface Mote { id: string; pos: Vec3 }
 export interface Lantern extends Mote { lit: boolean; deposited: number }
 
+export interface ShadeView extends Mote {
+  state: 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+}
+
 type EventData = {
+  pulse: { stunned_ids: string[] };
+  shade_spawned: { id: string };
   mote_picked: { carried: number };
   deposit: { lantern_id: string; amount: number; deposited: number };
   lantern_lit: { lantern_id: string };
@@ -58,7 +64,7 @@ export interface Snapshot {
   score: number;
   player: { pos: Vec3; flames: number; carried: number };
   lanterns: Lantern[];
-  shades: [];
+  shades: ShadeView[];
   motes_active: number;
   motes: Mote[];
 }

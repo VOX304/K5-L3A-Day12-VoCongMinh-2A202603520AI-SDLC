@@ -1,6 +1,7 @@
 import { defaultInput, pressedButtons } from './input.js';
 import { SeededRandom } from './random.js';
 import { distanceXZ, LANTERN_POSITIONS, MOTE_POINTS, nearestUnlit } from './night1.js';
+import { ShadePopulation } from './shades.js';
 import { TUNING } from './tuning.js';
 import type { Button, EndLine, GameEvent, GameState, InputState, Lantern, Mote, Scenario, Snapshot, Vec2, Vec3 } from './types.js';
 
@@ -30,7 +31,9 @@ export class Simulation {
   readonly random: SeededRandom;
   private readonly startingTime: number;
   readonly lanterns: Lantern[];
-  motes: Mote[] = [];
+  readonly enemies: ShadePopulation;
+  private pulseReadyTick = 0;
+  motes: (Mote & { expires: number | undefined })[] = [];
   private nextMoteId = 1;
   private readonly randomMotes: boolean;
   private previousInput = defaultInput();
@@ -60,6 +63,7 @@ export class Simulation {
     } else if (this.randomMotes) {
       for (let i = 0; i < TUNING.initial_motes; i++) this.spawnMote();
     }
+    this.enemies = new ShadePopulation(scenario, this.random);
     this.player.grounded = this.onIsland() && this.player.pos[1] === 0;
   }
 
@@ -73,6 +77,8 @@ export class Simulation {
     this.previousInput = { ...input, move: [...input.move] };
     this.tick += 1;
     const events: GameEvent[] = [];
+    this.enemies.expireTimers(this.tick);
+    this.motes = this.motes.filter(m => m.expires === undefined || m.expires > this.tick);
     if (this.player.invulnTicks > 0) this.player.invulnTicks -= 1;
     if (this.player.respawnTicks > 0) {
       this.player.respawnTicks -= 1;
@@ -97,7 +103,30 @@ export class Simulation {
       this.pickup(events);
       if (pressed.includes('interact')) this.deposit(events);
     }
+    const safe = this.lanterns.filter(lantern => lantern.lit);
+    this.enemies.updateSafety(safe);
+    if (active && pressed.includes('pulse') && this.tick >= this.pulseReadyTick && this.player.carried >= TUNING.pulse_cost) {
+      this.player.carried -= TUNING.pulse_cost;
+      this.pulseReadyTick = this.tick + TUNING.pulse_cooldown_s * TUNING.ticks_per_second;
+      const ids = this.enemies.pulse(this.player.pos, this.tick);
+      this.score += ids.length * TUNING.score.per_stun;
+      events.push({ type: 'event', tick: this.tick, name: 'pulse', data: { stunned_ids: ids } });
+    }
+    this.enemies.move(this.player.pos, this.lanterns, safe, this.tick);
+    if (active && this.player.invulnTicks === 0 && this.enemies.contact(this.player.pos, safe, this.tick)) {
+      this.player.flames--;
+      this.player.invulnTicks = TUNING.invuln_s * TUNING.ticks_per_second;
+      const dropped = Math.floor(this.player.carried * TUNING.hit_drop_ratio);
+      this.player.carried -= dropped;
+      for (let i = 0; i < dropped; i++) {
+        const angle = this.random.next() * 2 * Math.PI;
+        const radius = TUNING.drop_min_radius + this.random.next() * (TUNING.drop_max_radius - TUNING.drop_min_radius);
+        this.addMote([this.player.pos[0] + radius * Math.cos(angle), 0, this.player.pos[2] + radius * Math.sin(angle)], this.tick + TUNING.drop_ttl_ticks);
+      }
+      events.push({ type: 'event', tick: this.tick, name: 'player_hit', data: { by: 'shade', flames: this.player.flames, dropped } });
+    }
     if (this.randomMotes && this.tick % TUNING.mote_spawn_interval === 0) this.spawnMote();
+    this.enemies.spawn(this.player.pos, safe, this.tick, events);
 
     if (this.player.flames > 0 && this.lanterns.every(lantern => lantern.lit)) {
       this.state = 'won';
@@ -110,13 +139,13 @@ export class Simulation {
     return { events, pressed };
   }
 
-  private addMote(pos: Vec3): void {
-    this.motes.push({ id: 'M' + this.nextMoteId++, pos: [...pos] });
+  private addMote(pos: Vec3, expires?: number): void {
+    this.motes.push({ id: 'M' + this.nextMoteId++, pos: [...pos], expires });
   }
 
   private spawnMote(): void {
     if (this.motes.length >= TUNING.mote_cap) return;
-    const free = MOTE_POINTS.filter(point => !this.motes.some(mote => distanceXZ(point, mote.pos) < 1e-9));
+    const free = MOTE_POINTS.filter(point => !this.motes.some(mote => mote.expires === undefined && distanceXZ(point, mote.pos) < 1e-9));
     if (free.length) this.addMote(free[Math.floor(this.random.next() * free.length)]!);
   }
 
@@ -181,7 +210,8 @@ export class Simulation {
       time_left_s: this.timeLeftSeconds, score: this.score,
       player: { pos: this.player.pos.map(rounded) as Vec3, flames: this.player.flames, carried: this.player.carried },
       lanterns: this.lanterns.map(l => ({ ...l, pos: l.pos.map(rounded) as Vec3 })),
-      shades: [], motes_active: this.motes.length,
+      shades: this.enemies.shades.map(({ id, pos, state }) => ({ id, pos: pos.map(rounded) as Vec3, state })),
+      motes_active: this.motes.length,
       motes: this.motes.map(m => ({ id: m.id, pos: m.pos.map(rounded) as Vec3 })),
     };
   }

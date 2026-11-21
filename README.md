@@ -10,7 +10,7 @@ npm run build
 npm start
 ```
 
-Mở địa chỉ Vite in trên terminal. Điều khiển: **WASD / phím mũi tên** để đi, **Space** nhảy, **E** nạp đom đóm, kéo chuột trái để xoay camera. Nhân vật dạng capsule có nón, đứng trên đảo tròn bán kính 40 m. Tốc độ là 6 m/s; input chéo được chuẩn hóa.
+Mở địa chỉ Vite in trên terminal. Điều khiển: **WASD / phím mũi tên** để đi, **Space** nhảy, **E** nạp đom đóm, **Q / chuột phải** Tỏa Sáng, kéo chuột trái để xoay camera. Nhân vật dạng capsule có nón, đứng trên đảo tròn bán kính 40 m. Tốc độ là 6 m/s; input chéo được chuẩn hóa.
 
 Headless sau build (không cần cửa sổ/GPU):
 
@@ -38,7 +38,7 @@ Tất cả tuning nằm ở [src/sim/tuning.ts](src/sim/tuning.ts). `npm run con
 
 ## Điểm số
 
-Mỗi đom đóm nạp vào đèn được 10 điểm. Mỗi đèn vừa thắp được thêm 100 điểm. Khi thắng, cộng thêm `2 × floor(giây còn lại) + 50 × số Ngọn Lửa còn lại`.
+Mỗi đom đóm nạp vào đèn được 10 điểm. Mỗi đèn vừa thắp được thêm 100 điểm. Mỗi Bóng Mực trúng Tỏa Sáng được 5 điểm. Khi thắng, cộng thêm `2 × floor(giây còn lại) + 50 × số Ngọn Lửa còn lại`.
 
 Vật lý: nhảy chỉ khi grounded và có cạnh nhấn, điều khiển ngang đầy đủ trong không khí. Tích phân Y theo gia tốc không đổi trong mỗi tick (`y += vy/60 + gravity/(2×60²)`), tiếp đất khi cắt Y=0 từ trên xuống trong đảo; không kéo người dưới mặt đảo lên sàn. Đi qua bán kính 40 thì rơi. Khi Y < −10, bỏ qua bất tử: mất 1 Ngọn Lửa và toàn bộ đồ mang; event v1.0 ghi `player_hit {by:"fall",flames,dropped:0}` (không sinh đồ rơi, không thêm trường `lost`). Người còn sống chờ đúng 60 tick, đứng yên, rồi hồi sinh ở origin với vận tốc 0 và bất tử 90 tick. Hết lửa thì thua ngay, lý do `no_flames` ưu tiên hơn `dawn`. Sai số 1e−12 ở so sánh mép đảo/mặt sàn/ngưỡng rơi tránh kích hoạt sớm vì sai số dấu phẩy động.
 

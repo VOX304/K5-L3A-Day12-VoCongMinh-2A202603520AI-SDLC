@@ -215,26 +215,14 @@ renderer.setAnimationLoop((now: number) => {
     accumulated -= fixedStep;
   }
 
-  // Sync lanterns from sim state if present
-  const simSnapshot = sim.snapshot();
-  const renderState = sim as Simulation & {
-    lanterns?: Parameters<LanternsManager['syncState']>[0];
-    motes?: Parameters<MotesRenderAdapter['update']>[0];
-    shades?: Parameters<ShadesRenderAdapter['update']>[0];
-  };
-  const simLanterns = renderState.lanterns ?? simSnapshot.lanterns;
-  const { litCount, totalCount } = lanternsManager.syncState(simLanterns);
+  const { litCount, totalCount } = lanternsManager.syncState(sim.lanterns);
 
   // Dynamic ambient light: 0.15 + 0.55 * (lit / total)
   ambientLight.intensity = 0.15 + 0.55 * (litCount / (totalCount || 5));
 
-  // Sync motes and shades from state arrays (empty now, handled gracefully)
   const elapsedSeconds = now / 1000;
-  const simMotes = renderState.motes ?? simSnapshot.motes;
-  motesAdapter.update(simMotes, elapsedSeconds);
-
-  const simShades = renderState.shades ?? simSnapshot.shades;
-  shadesAdapter.update(simShades, elapsedSeconds);
+  motesAdapter.update(sim.motes, elapsedSeconds);
+  shadesAdapter.update(sim.enemies.shades, elapsedSeconds);
 
   // Update Player position and facing
   const alpha = accumulated / fixedStep;
