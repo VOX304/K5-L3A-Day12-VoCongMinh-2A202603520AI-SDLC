@@ -8,7 +8,7 @@ describe('fixed-step simulation', () => {
   it('starts at scenario position without applying tick 0 input or mutating the scenario', () => {
     const pos: [number, number, number] = [1.23456, 2, -3.45678];
     const sim = new Simulation(42, { player: { pos } });
-    expect(sim.snapshot()).toMatchObject({ tick: 0, sim_tick: 0, score: 0, player: { pos: [1.235, 2, -3.457] }, lanterns: [], shades: [], motes: [], motes_active: 0 });
+    expect(sim.snapshot()).toMatchObject({ tick: 0, sim_tick: 0, score: 0, player: { pos: [1.235, 2, -3.457] }, shades: [], motes_active: 20 });
     sim.step({ ...defaultInput(), move: [0, 1] });
     expect(sim.snapshot().player.pos).toEqual([1.235, 1.997, -3.357]);
     expect(pos).toEqual([1.23456, 2, -3.45678]);

@@ -1,7 +1,8 @@
 import { defaultInput, pressedButtons } from './input.js';
 import { SeededRandom } from './random.js';
+import { distanceXZ, LANTERN_POSITIONS, MOTE_POINTS, nearestUnlit } from './night1.js';
 import { TUNING } from './tuning.js';
-import type { Button, EndLine, GameEvent, GameState, InputState, Scenario, Snapshot, Vec2, Vec3 } from './types.js';
+import type { Button, EndLine, GameEvent, GameState, InputState, Lantern, Mote, Scenario, Snapshot, Vec2, Vec3 } from './types.js';
 
 // Absorb accumulated floating-point error at exact terrain/height boundaries.
 const PHYSICS_EPSILON = 1e-12;
@@ -28,6 +29,10 @@ export class Simulation {
   readonly player: { pos: Vec3; flames: number; carried: number; vel: Vec3; grounded: boolean; invulnTicks: number; respawnTicks: number };
   readonly random: SeededRandom;
   private readonly startingTime: number;
+  readonly lanterns: Lantern[];
+  motes: Mote[] = [];
+  private nextMoteId = 1;
+  private readonly randomMotes: boolean;
   private previousInput = defaultInput();
 
   constructor(seed: number, scenario: Scenario = {}) {
@@ -36,12 +41,25 @@ export class Simulation {
     this.player = {
       pos: [...(scenario.player?.pos ?? [0, 0, 0])],
       flames: scenario.player?.flames ?? TUNING.flames,
-      carried: scenario.player?.carried ?? 0,
+      carried: Math.min(scenario.player?.carried ?? 0, TUNING.carry_capacity),
       vel: [0, 0, 0],
       grounded: false,
       invulnTicks: 0,
       respawnTicks: 0,
     };
+    this.lanterns = LANTERN_POSITIONS.map((base, index) => {
+      const id = 'L' + (index + 1);
+      const patch = scenario.lanterns?.find(lantern => lantern.id === id);
+      const deposited = Math.min(patch?.deposited ?? 0, TUNING.lantern_cost);
+      const lit = patch?.lit ?? deposited === TUNING.lantern_cost;
+      return { id, pos: [...(patch?.pos ?? base)], lit, deposited: lit ? TUNING.lantern_cost : deposited };
+    });
+    this.randomMotes = scenario.random_motes ?? true;
+    if (scenario.motes) {
+      for (const pos of scenario.motes) this.addMote(pos);
+    } else if (this.randomMotes) {
+      for (let i = 0; i < TUNING.initial_motes; i++) this.spawnMote();
+    }
     this.player.grounded = this.onIsland() && this.player.pos[1] === 0;
   }
 
@@ -74,11 +92,58 @@ export class Simulation {
         events.push({ type: 'event', tick: this.tick, name: 'player_hit', data: { by: 'fall', flames: this.player.flames, dropped: 0 } });
       }
     }
-    if (this.player.flames === 0 || this.timeLeftSeconds === 0) {
+    const active = this.player.respawnTicks === 0 && this.player.flames > 0;
+    if (active) {
+      this.pickup(events);
+      if (pressed.includes('interact')) this.deposit(events);
+    }
+    if (this.randomMotes && this.tick % TUNING.mote_spawn_interval === 0) this.spawnMote();
+
+    if (this.player.flames > 0 && this.lanterns.every(lantern => lantern.lit)) {
+      this.state = 'won';
+      this.score += Math.floor(this.timeLeftSeconds) * TUNING.score.per_second_left + this.player.flames * TUNING.score.per_flame_left;
+      events.push({ type: 'event', tick: this.tick, name: 'game_over', data: { result: 'won', reason: 'all_lit' } });
+    } else if (this.player.flames === 0 || this.timeLeftSeconds === 0) {
       this.state = 'lost';
       events.push({ type: 'event', tick: this.tick, name: 'game_over', data: { result: 'lost', reason: this.player.flames === 0 ? 'no_flames' : 'dawn' } });
     }
     return { events, pressed };
+  }
+
+  private addMote(pos: Vec3): void {
+    this.motes.push({ id: 'M' + this.nextMoteId++, pos: [...pos] });
+  }
+
+  private spawnMote(): void {
+    if (this.motes.length >= TUNING.mote_cap) return;
+    const free = MOTE_POINTS.filter(point => !this.motes.some(mote => distanceXZ(point, mote.pos) < 1e-9));
+    if (free.length) this.addMote(free[Math.floor(this.random.next() * free.length)]!);
+  }
+
+  private pickup(events: GameEvent[]): void {
+    this.motes = this.motes.filter(({ pos }) => {
+      if (this.player.carried >= TUNING.carry_capacity || distanceXZ(this.player.pos, pos) > TUNING.pickup_radius + PHYSICS_EPSILON ||
+          Math.abs(this.player.pos[1] - pos[1]) > TUNING.contact_height) return true;
+      this.player.carried++;
+      events.push({ type: 'event', tick: this.tick, name: 'mote_picked', data: { carried: this.player.carried } });
+      return false;
+    });
+  }
+
+  private deposit(events: GameEvent[]): void {
+    const lantern = nearestUnlit(this.player.pos, this.lanterns);
+    if (!lantern || distanceXZ(this.player.pos, lantern.pos) > TUNING.interact_radius + PHYSICS_EPSILON) return;
+    const amount = Math.min(this.player.carried, TUNING.lantern_cost - lantern.deposited);
+    if (!amount) return;
+    this.player.carried -= amount;
+    lantern.deposited += amount;
+    this.score += TUNING.score.per_mote * amount;
+    events.push({ type: 'event', tick: this.tick, name: 'deposit', data: { lantern_id: lantern.id, amount, deposited: lantern.deposited } });
+    if (lantern.deposited === TUNING.lantern_cost) {
+      lantern.lit = true;
+      this.score += TUNING.score.per_lantern;
+      events.push({ type: 'event', tick: this.tick, name: 'lantern_lit', data: { lantern_id: lantern.id } });
+    }
   }
 
   private onIsland(): boolean {
@@ -115,7 +180,9 @@ export class Simulation {
       type: 'snapshot', tick: this.tick, sim_tick: this.tick, state: this.state,
       time_left_s: this.timeLeftSeconds, score: this.score,
       player: { pos: this.player.pos.map(rounded) as Vec3, flames: this.player.flames, carried: this.player.carried },
-      lanterns: [], shades: [], motes_active: 0, motes: [],
+      lanterns: this.lanterns.map(l => ({ ...l, pos: l.pos.map(rounded) as Vec3 })),
+      shades: [], motes_active: this.motes.length,
+      motes: this.motes.map(m => ({ id: m.id, pos: m.pos.map(rounded) as Vec3 })),
     };
   }
 

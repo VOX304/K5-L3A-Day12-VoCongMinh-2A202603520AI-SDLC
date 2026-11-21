@@ -28,7 +28,7 @@ export interface GameOverEvent {
   type: 'event';
   tick: number;
   name: 'game_over';
-  data: { result: 'lost'; reason: 'dawn' | 'no_flames' };
+  data: { result: 'lost' | 'won'; reason: 'dawn' | 'no_flames' | 'all_lit' };
 }
 
 export interface PlayerHitEvent {
@@ -38,7 +38,16 @@ export interface PlayerHitEvent {
   data: { by: 'fall'; flames: number; dropped: number };
 }
 
-export type GameEvent = GameOverEvent | PlayerHitEvent;
+export interface Mote { id: string; pos: Vec3 }
+export interface Lantern extends Mote { lit: boolean; deposited: number }
+
+type EventData = {
+  mote_picked: { carried: number };
+  deposit: { lantern_id: string; amount: number; deposited: number };
+  lantern_lit: { lantern_id: string };
+};
+type EntityEvent = { [K in keyof EventData]: { type: 'event'; tick: number; name: K; data: EventData[K] } }[keyof EventData];
+export type GameEvent = GameOverEvent | PlayerHitEvent | EntityEvent;
 
 export interface Snapshot {
   type: 'snapshot';
@@ -48,10 +57,10 @@ export interface Snapshot {
   time_left_s: number;
   score: number;
   player: { pos: Vec3; flames: number; carried: number };
-  lanterns: [];
+  lanterns: Lantern[];
   shades: [];
   motes_active: number;
-  motes: [];
+  motes: Mote[];
 }
 
 export interface EndLine {
