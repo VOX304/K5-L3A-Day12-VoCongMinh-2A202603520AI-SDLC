@@ -8,6 +8,8 @@
     "contract": "tsx scripts/write-contract.ts",
     "build": "npm run contract && tsc -p tsconfig.headless.json && tsc -p tsconfig.web.json && vite build",
     "test": "vitest run",
+    "determinism": "node scripts/determinism.mjs",
+    "verify": "node scripts/verify.mjs",
     "start": "vite --host 0.0.0.0",
     "headless": "tsx src/headless/cli.ts"
   },

@@ -10,7 +10,7 @@ npm run build
 npm start
 ```
 
-Mở địa chỉ Vite in trên terminal. Điều khiển: **WASD / phím mũi tên** để đi, **Q/E** xoay camera. Nhân vật dạng capsule có nón, đứng trên đảo tròn bán kính 40 m. Tốc độ là 6 m/s; input chéo được chuẩn hóa.
+Mở địa chỉ Vite in trên terminal. Điều khiển: **WASD / phím mũi tên** để đi, **Space** nhảy, **Q/E** xoay camera. Nhân vật dạng capsule có nón, đứng trên đảo tròn bán kính 40 m. Tốc độ là 6 m/s; input chéo được chuẩn hóa.
 
 Headless sau build (không cần cửa sổ/GPU):
 
@@ -18,7 +18,15 @@ Headless sau build (không cần cửa sổ/GPU):
 node dist/headless/cli.js --seed 42 --night 1 --scenario examples/scenario.json --inputs examples/inputs.json --ticks 240 --snapshot-every 60 --out trace.jsonl
 ```
 
-Hoặc chạy trực tiếp TypeScript: `npm run headless -- --seed 42 --night 1 --ticks 120 --out trace.jsonl`. Kiểm thử bằng `npm test`.
+Hoặc chạy trực tiếp TypeScript: `npm run headless -- --seed 42 --night 1 --ticks 120 --out trace.jsonl`. Kiểm thử bằng `npm test`; gate hoàn tất là `npm run verify` (build, test, so sánh byte hai lần chạy CLI đã biên dịch).
+
+Ví dụ nhảy và đổi hướng trên không (giữ Space qua lúc đáp không nhảy lại):
+
+```sh
+node dist/headless/cli.js --seed 42 --night 1 --inputs examples/jump-inputs.json --ticks 63 --snapshot-every 21 --out jump.jsonl
+```
+
+Đỉnh nhảy ở tick 21: `[0,1.225,2.1]`; đáp ở tick 42: `[2.1,0,2.1]`. Replay trong verify kiểm riêng di chuyển, nhảy và rơi/hồi sinh; CI chạy cùng gate trên Linux/macOS.
 
 `--seed`, `--night`, `--ticks`, `--out` là bắt buộc; `--night` chỉ nhận 1. `--ticks` nhận số nguyên không âm, `--snapshot-every` nhận số nguyên dương (mặc định 10); seed nhận số nguyên an toàn có dấu. `--scenario` và `--inputs` là tùy chọn. Lỗi tham số, JSON, schema hoặc tick input không tăng nghiêm ngặt trả exit **2**, thông báo ra stderr; lỗi ghi file trả exit **1**. CLI không in log ra stdout và kiểm tra hết input trước khi tạo output. Thư mục chứa `--out` phải tồn tại.
 
@@ -26,9 +34,11 @@ Hoặc chạy trực tiếp TypeScript: `npm run headless -- --seed 42 --night 1
 
 Snapshot tick 0 được ghi sau scenario, trước input tick 0. Bước k đọc input tick k rồi tăng tick lên k+1; event ghi k+1 trước snapshot cùng tick. Trường input vắng mặt giữ giá trị; nút chỉ có cạnh nhấn khi false → true. Snapshot xuất ở tick 0, N, 2N… theo `--snapshot-every`; không tự thêm snapshot cuối nếu không đúng chu kỳ. Dòng cuối luôn là `end`, kể cả khi `--ticks 0`. `sim_tick` bằng tick. Thời gian được tính từ thời gian ban đầu trừ tick/60; bình minh dừng mô phỏng với `game_over`/`dawn` rồi `end`.
 
-Tất cả tuning nằm ở [src/sim/tuning.ts](src/sim/tuning.ts). `npm run contract` (cũng chạy trong build) sinh [game.contract.json](game.contract.json). Kiểm thử phát hiện contract đã commit lệch tuning. Số liệu đang dùng từ Ticket-02: tốc độ 6 m/s, đảo 40 m, thời gian 300 s, metadata 3 Ngọn Lửa. Các khái niệm chưa có cơ chế được khai `null`; `fall_enabled` là `false`. Điểm luôn 0. Scenario hỗ trợ `player.pos`, `player.carried`, `player.flames`, `time_left_s`; các trường thực thể v1.0 được kiểm tra định dạng nhưng chưa dựng thực thể, snapshot luôn có `lanterns: []`, `shades: []`, `motes: []`, `motes_active: 0`. Trường mở rộng không biết được bỏ qua để thuận tiện tích hợp ticket sau.
+Tất cả tuning nằm ở [src/sim/tuning.ts](src/sim/tuning.ts). `npm run contract` (cũng chạy trong build) sinh [game.contract.json](game.contract.json). Kiểm thử phát hiện contract đã commit lệch tuning. Số liệu đang dùng từ Ticket-02: tốc độ 6 m/s, đảo 40 m, thời gian 300 s, 3 Ngọn Lửa, nhảy 7 m/s và trọng lực −20 m/s². Các khái niệm chưa có cơ chế được khai `null`; `fall_enabled` là `true`. Điểm luôn 0. Scenario hỗ trợ `player.pos`, `player.carried`, `player.flames`, `time_left_s`; các trường thực thể v1.0 được kiểm tra định dạng nhưng chưa dựng thực thể, snapshot luôn có `lanterns: []`, `shades: []`, `motes: []`, `motes_active: 0`. Trường mở rộng không biết được bỏ qua để thuận tiện tích hợp ticket sau.
 
-Giới hạn ticket: chưa nhảy, lướt, thu thập, tương tác đèn, tỏa sáng, kẻ địch, sát thương hay thắng màn. Các nút được lưu và phát hiện cạnh nhấn nhưng không có hiệu ứng gameplay. Chưa xử lý rơi hoặc chặn mép đảo; di chuyển tiếp tục trên mặt phẳng XZ và giữ nguyên Y trong scenario. Tài liệu gốc ở [docs/requirements](docs/requirements) và [GLOSSARY.md](GLOSSARY.md).
+Vật lý: nhảy chỉ khi grounded và có cạnh nhấn, điều khiển ngang đầy đủ trong không khí. Tích phân Y theo gia tốc không đổi trong mỗi tick (`y += vy/60 + gravity/(2×60²)`), tiếp đất khi cắt Y=0 từ trên xuống trong đảo; không kéo người dưới mặt đảo lên sàn. Đi qua bán kính 40 thì rơi. Khi Y < −10, bỏ qua bất tử: mất 1 Ngọn Lửa và toàn bộ đồ mang; event v1.0 ghi `player_hit {by:"fall",flames,dropped:0}` (không sinh đồ rơi, không thêm trường `lost`). Người còn sống chờ đúng 60 tick, đứng yên, rồi hồi sinh ở origin với vận tốc 0 và bất tử 90 tick. Hết lửa thì thua ngay, lý do `no_flames` ưu tiên hơn `dawn`. Sai số 1e−12 ở so sánh mép đảo/mặt sàn/ngưỡng rơi tránh kích hoạt sớm vì sai số dấu phẩy động.
+
+Giới hạn ticket: chưa lướt, thu thập, tương tác đèn, tỏa sáng, kẻ địch hoặc thắng màn. Các nút tương ứng được lưu/phát hiện cạnh nhưng chưa có hiệu ứng gameplay. Tài liệu gốc ở [docs/requirements](docs/requirements) và [GLOSSARY.md](GLOSSARY.md). [AGENTS.md](AGENTS.md) và Stop hook trong `.claude/settings.json` yêu cầu verify đạt trước hoàn tất; hook dùng [quy ước exit 2 chính thức của Claude Code](https://code.claude.com/docs/en/hooks#exit-code-2-behavior-per-event) để chặn khi verify lỗi. Test harness kiểm cả nhánh xanh/đỏ bằng project tạm, không sửa source hoặc bỏ qua lỗi thật.
 
 Sáng tạo của tôi: hình capsule đội nón và ánh sáng ấm đi theo Mây; chỉ là render, không đổi trace. Các mesh tạo bằng hình học Three.js, không dùng asset ngoài. Xem [CREDITS.md](CREDITS.md) và bằng chứng [docs/evidence/ticket-01.md](docs/evidence/ticket-01.md).
 
