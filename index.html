@@ -3,11 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Đảo Đèn Lồng · Bộ khung</title>
+    <title>Đảo Đèn Lồng · Đêm 1</title>
   </head>
   <body>
     <main id="app"></main>
-    <aside><h1>Đảo Đèn Lồng</h1><p>Đêm 1 · Đảo Bến</p><p>WASD / phím mũi tên để di chuyển<br />Space để nhảy · Q / E xoay camera</p><output id="position"></output><p class="note">Bản thử di chuyển · Chưa có đom đóm, đèn và Bóng Mực.</p></aside>
+
+    <!-- Minimal HUD Overlay -->
+    <div id="hud">
+      <div class="hud-top">
+        <div class="hud-card hud-flames">
+          <span class="hud-label">Ngọn Lửa</span>
+          <span id="hud-flames-icons" class="hud-value">🔥🔥🔥</span>
+        </div>
+        <div class="hud-card hud-timer">
+          <span class="hud-label">Thời gian</span>
+          <span id="hud-timer-value" class="hud-value">05:00</span>
+        </div>
+        <div class="hud-card hud-lanterns">
+          <span class="hud-label">Đèn Lớn</span>
+          <span id="hud-lanterns-value" class="hud-value">0 / 5</span>
+        </div>
+        <div class="hud-card hud-score">
+          <span class="hud-label">Điểm số</span>
+          <span id="hud-score-value" class="hud-value">0</span>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="hud-card hud-carried">
+          <span class="hud-label">Đom đóm mang theo</span>
+          <span id="hud-carried-value" class="hud-value">0 / 10</span>
+        </div>
+        <div class="hud-controls-help">
+          <span>WASD / Mũi tên: Di chuyển</span>
+          <span>Kéo chuột: Xoay camera</span>
+          <span>Space: Nhảy</span>
+          <span>E: Nạp đèn</span>
+          <span>Q / Chuột phải: Tỏa sáng</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Win / Lose Overlay Modal -->
+    <div id="game-over-modal" class="modal-backdrop" style="display: none;">
+      <div class="modal-card">
+        <h2 id="modal-title">Kết quả</h2>
+        <p id="modal-message"></p>
+        <div class="modal-stats">
+          <div>Điểm số: <strong id="modal-score">0</strong></div>
+        </div>
+        <button id="restart-btn" class="modal-button">Chơi lại</button>
+      </div>
+    </div>
+
     <script type="module" src="/src/web/main.ts"></script>
   </body>
 </html>
