@@ -1,9 +1,199 @@
-:root { font-family: system-ui, sans-serif; color: #f5f1e6; background: #0e1430; }
-body { margin: 0; overflow: hidden; }
-canvas { display: block; }
-aside { position: absolute; top: 1.5rem; left: 1.5rem; max-width: 300px; padding: 1.3rem 1.5rem; border: 1px solid #f2c14e55; border-radius: 16px; background: #0e1430d9; pointer-events: none; }
-h1 { color: #ffb347; font-size: 1.6rem; margin: 0; }
-p { line-height: 1.6; margin: 0.7rem 0; }
-output { color: #ffe9b0; font-variant-numeric: tabular-nums; }
-.note { font-size: 0.75rem; opacity: 0.7; margin-bottom: 0; }
-@media (max-width: 600px) { aside { top: 0.75rem; left: 0.75rem; max-width: 220px; padding: 0.9rem; } h1 { font-size: 1.25rem; } }
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #f5f1e6;
+  background: #0e1430;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #0e1430;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* HUD Overlay */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.hud-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.hud-card {
+  background: rgba(14, 20, 48, 0.82);
+  border: 1px solid rgba(242, 193, 78, 0.4);
+  border-radius: 12px;
+  padding: 0.6rem 1.1rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.hud-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffe9b0;
+  opacity: 0.85;
+}
+
+.hud-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f5f1e6;
+}
+
+.hud-timer .hud-value {
+  color: #ffb347;
+}
+
+.hud-timer .hud-value.danger-pulse {
+  color: #ff5a5f;
+  animation: pulse-red 1s infinite alternate;
+}
+
+@keyframes pulse-red {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0.65; transform: scale(1.08); }
+}
+
+.hud-lanterns .hud-value {
+  color: #ffe9b0;
+}
+
+.hud-score .hud-value {
+  color: #f2c14e;
+}
+
+.hud-carried .hud-value {
+  color: #fff6c2;
+}
+
+.hud-controls-help {
+  background: rgba(14, 20, 48, 0.75);
+  border: 1px solid rgba(242, 193, 78, 0.25);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 0.78rem;
+  color: #ffe9b0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  backdrop-filter: blur(6px);
+}
+
+/* Game Over / Win Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 20, 48, 0.88);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-card {
+  background: #0e1430;
+  border: 2px solid #f2c14e;
+  border-radius: 20px;
+  padding: 2.2rem 2.8rem;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 179, 71, 0.2);
+}
+
+.modal-card h2 {
+  font-size: 2.2rem;
+  margin: 0 0 0.8rem;
+  color: #f2c14e;
+}
+
+.modal-card p {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #f5f1e6;
+  margin: 0 0 1.5rem;
+}
+
+.modal-stats {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.8rem;
+  font-size: 1.2rem;
+  color: #ffe9b0;
+}
+
+.modal-button {
+  background: linear-gradient(135deg, #f2c14e, #ffb347);
+  color: #0e1430;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  padding: 0.85rem 2.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(242, 193, 78, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.modal-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(242, 193, 78, 0.6);
+}
+
+.modal-button:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 720px) {
+  #hud {
+    padding: 0.75rem;
+  }
+  .hud-top {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .hud-card {
+    padding: 0.4rem 0.75rem;
+  }
+  .hud-value {
+    font-size: 1.05rem;
+  }
+  .hud-controls-help {
+    font-size: 0.7rem;
+    gap: 0.4rem;
+  }
+}
