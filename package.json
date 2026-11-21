@@ -1,0 +1,27 @@
+{
+  "name": "dao-den-long",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "contract": "tsx scripts/write-contract.ts",
+    "build": "npm run contract && tsc -p tsconfig.headless.json && tsc -p tsconfig.web.json && vite build",
+    "test": "vitest run",
+    "determinism": "node scripts/determinism.mjs",
+    "verify": "node scripts/verify.mjs",
+    "start": "vite --host 0.0.0.0",
+    "headless": "tsx src/headless/cli.ts"
+  },
+  "dependencies": {
+    "three": "^0.181.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/three": "^0.181.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.2.0",
+    "vitest": "^4.0.0"
+  }
+}
