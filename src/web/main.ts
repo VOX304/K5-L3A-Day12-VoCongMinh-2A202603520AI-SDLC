@@ -70,7 +70,7 @@ renderer.setAnimationLoop((now: number) => {
   lastTime = now;
   while (accumulated >= fixedStep) {
     yaw += (pressed('KeyQ') - pressed('KeyE')) * 1.5;
-    sim.step({ ...defaultInput(), cam_yaw_deg: yaw, move: [
+    sim.step({ ...defaultInput(), jump: Boolean(pressed('Space')), cam_yaw_deg: yaw, move: [
       pressed('KeyD', 'ArrowRight') - pressed('KeyA', 'ArrowLeft'),
       pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown'),
     ] });

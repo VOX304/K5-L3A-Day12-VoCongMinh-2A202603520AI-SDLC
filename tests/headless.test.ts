@@ -111,6 +111,40 @@ describe('headless process scenarios', () => {
     expect(second.status).toBe(0);
     expect(readFileSync(first.out).equals(readFileSync(second.out))).toBe(true);
   });
+
+  it('traces a jump arc and full air control, holding jump through landing does not repeat it', () => {
+    const inputs = file({ frames: [{ tick: 0, jump: true, move: [0, 1] }, { tick: 21, move: [1, 0] }] });
+    const result = run(['--inputs', inputs, '--snapshot-every', '21'], 63);
+    expect(result.status).toBe(0);
+    expect(lines(result.out).filter((line) => line.type === 'snapshot').map((line) => line.player.pos)).toEqual([
+      [0, 0, 0], [0, 1.225, 2.1], [2.1, 0, 2.1], [4.2, 0, 2.1],
+    ]);
+  });
+
+  it('walks off the island, hits once, loses all carried motes, and respawns exactly 60 ticks later', () => {
+    const scenario = file({ player: { pos: [40, 0, 0], flames: 3, carried: 7 } });
+    const inputs = file({ frames: [{ tick: 0, move: [1, 0] }, { tick: 60, move: [0, 0] }] });
+    const result = run(['--scenario', scenario, '--inputs', inputs, '--snapshot-every', '1'], 121);
+    expect(result.status).toBe(0);
+    const output = lines(result.out);
+    const hits = output.filter((line) => line.type === 'event');
+    expect(hits).toEqual([{ type: 'event', tick: 61, name: 'player_hit', data: { by: 'fall', flames: 2, dropped: 0 } }]);
+    expect(hits[0]!.data).not.toHaveProperty('lost');
+    const beforeRespawn = output.find((line) => line.type === 'snapshot' && line.tick === 120)!;
+    expect(beforeRespawn.player.pos[1]).toBeLessThan(-10);
+    expect(output.at(-2)).toMatchObject({ tick: 121, player: { pos: [0, 0, 0], flames: 2, carried: 0 } });
+  });
+
+  it('ends immediately on a fatal fall and places both events before the final end', () => {
+    const result = run(['--scenario', file({ player: { pos: [41, -11, 0], flames: 1, carried: 5 } }), '--snapshot-every', '10'], 100);
+    expect(result.status).toBe(0);
+    expect(lines(result.out)).toMatchObject([
+      { type: 'snapshot', tick: 0, player: { flames: 1, carried: 5 } },
+      { type: 'event', tick: 1, name: 'player_hit', data: { by: 'fall', flames: 0, dropped: 0 } },
+      { type: 'event', tick: 1, name: 'game_over', data: { result: 'lost', reason: 'no_flames' } },
+      { type: 'end', ticks: 1, state: 'lost', score: 0 },
+    ]);
+  });
 });
 
 describe('validation and published contract', () => {

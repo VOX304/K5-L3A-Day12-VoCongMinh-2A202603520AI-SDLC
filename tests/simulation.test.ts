@@ -10,7 +10,7 @@ describe('fixed-step simulation', () => {
     const sim = new Simulation(42, { player: { pos } });
     expect(sim.snapshot()).toMatchObject({ tick: 0, sim_tick: 0, score: 0, player: { pos: [1.235, 2, -3.457] }, lanterns: [], shades: [], motes: [], motes_active: 0 });
     sim.step({ ...defaultInput(), move: [0, 1] });
-    expect(sim.snapshot().player.pos).toEqual([1.235, 2, -3.357]);
+    expect(sim.snapshot().player.pos).toEqual([1.235, 1.997, -3.357]);
     expect(pos).toEqual([1.23456, 2, -3.45678]);
   });
 
@@ -45,7 +45,8 @@ describe('fixed-step simulation', () => {
     const edges: string[][] = [];
     for (let tick = 0; tick < 8; tick++) edges.push(sim.step(timeline.at(tick)).pressed);
     expect(edges).toEqual([[], [], ['jump'], [], ['interact'], [], [], ['jump']]);
-    expect(sim.snapshot().player.pos).toEqual([0.6, 0, 0]);
+    expect(sim.player.pos[0]).toBeCloseTo(0.6);
+    expect(sim.player.pos[2]).toBeCloseTo(0);
     expect(timeline.at(8)).toMatchObject({ move: [0, 1], cam_yaw_deg: 90, interact: true });
   });
 

@@ -24,12 +24,21 @@ export interface Scenario {
   lanterns?: { id: string; pos?: Vec3; deposited?: number; lit?: boolean }[];
 }
 
-export interface GameEvent {
+export interface GameOverEvent {
   type: 'event';
   tick: number;
   name: 'game_over';
-  data: { result: 'lost'; reason: 'dawn' };
+  data: { result: 'lost'; reason: 'dawn' | 'no_flames' };
 }
+
+export interface PlayerHitEvent {
+  type: 'event';
+  tick: number;
+  name: 'player_hit';
+  data: { by: 'fall'; flames: number; dropped: number };
+}
+
+export type GameEvent = GameOverEvent | PlayerHitEvent;
 
 export interface Snapshot {
   type: 'snapshot';

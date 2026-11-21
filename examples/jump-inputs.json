@@ -1,0 +1,6 @@
+{
+  "frames": [
+    { "tick": 0, "jump": true, "move": [0, 1] },
+    { "tick": 21, "move": [1, 0] }
+  ]
+}

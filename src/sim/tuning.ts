@@ -2,6 +2,10 @@
 export const TUNING = {
   ticks_per_second: 60,
   player_speed: 6,
+  jump_velocity: 7,
+  gravity: -20,
+  fall_threshold_y: -10,
+  respawn_ticks: 60,
   island_radius_night1: 40,
   night1_duration_s: 300,
   flames: 3,
@@ -12,7 +16,7 @@ export const TUNING = {
   interact_radius: null,
   pulse_cost: null,
   pulse_radius: null,
-  invuln_s: null,
+  invuln_s: 1.5,
   hit_drop_ratio: null,
   pulse_stun_s: null,
   pulse_push_m: null,
@@ -20,7 +24,7 @@ export const TUNING = {
   safe_radius: null,
   shade_speed: null,
   shade_hit_radius: null,
-  fall_enabled: false,
+  fall_enabled: true,
   score: {
     per_mote: null,
     per_lantern: null,
